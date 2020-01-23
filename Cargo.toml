@@ -9,21 +9,31 @@ edition = "2018"
 [dependencies]
 encoding_rs = "0.8.22"
 encoding_rs_io = "0.1.6"
+#ipnetwork = "0.16.0"
+ipnet = "2.1.0"
+#color-backtrace = "0.3.0"
 
 [profile.release]
-#opt-level = 3
-debug = false
+opt-level = 3
+#debug = false
 rpath = false
-#lto = false
-debug-assertions = false
-#codegen-units = 16
-#panic = 'unwind'
+lto = false
+#debug-assertions = false
+codegen-units = 16
+panic = 'unwind'
 incremental = false
-overflow-checks = false
+#overflow-checks = false
 
 ### min exe
 #opt-level = 's'
-opt-level = 'z'
-lto = true
-panic = 'abort'
-codegen-units = 1
+#opt-level = 'z'
+#lto = true
+#panic = 'abort'
+#codegen-units = 1
+
+debug = true
+debug-assertions = true
+overflow-checks = true
+
+
+
