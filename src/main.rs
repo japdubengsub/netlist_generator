@@ -7,6 +7,7 @@
 use std::any::type_name;
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader, Read};
+use std::mem;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::process::exit;
 use std::slice::Split;
@@ -17,22 +18,25 @@ use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
 use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 
+use netlist_generator::NetSize;
+use netlist_generator::Resize;
+
 const CSV_FILE: &str = "A:\\dump2.csv";
 
 fn print_sep() {
-    println!("{}", "=".repeat(120));
+    println!("{}", "=".repeat(80));
 }
 
 fn type_of<T>(_: T) -> &'static str {
     type_name::<T>()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Stat {
     total_file_lines: u32,
-    ipv4: u32,
+    ipv4_hosts: u32,
     ipv4_networks: u32,
-    ipv6: u32,
+    ipv6_hosts: u32,
     ipv6_networks: u32,
 }
 
@@ -42,20 +46,22 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
     //    println!("hello {}", input);
     //    stdin().read_line(&mut input).expect("Couldn't read line");
 
-    let mut stat = Stat {
-        total_file_lines: 0,
-        ipv4: 0,
-        ipv4_networks: 0,
-        ipv6: 0,
-        ipv6_networks: 0,
-    };
+    let mut stat: Stat = Default::default();
+//    let mut stat = Stat {
+//        total_file_lines: 0,
+//        ipv4_hosts: 0,
+//        ipv4_networks: 0,
+//        ipv6_hosts: 0,
+//        ipv6_networks: 0,
+//    };
 
     let transcoded = DecodeReaderBytesBuilder::new()
         .encoding(Some(WINDOWS_1251))
         .build(file);
     let file_reader = BufReader::new(transcoded);
 
-    let mut net_list: Vec<Ipv4Net> = Vec::with_capacity(3_000_000);
+//    let mut net_list: Vec<Ipv4Net> = Vec::with_capacity(3_000_000);
+    let mut net_list: Vec<Ipv4Net> = Vec::new();
     //    println!("hello {}", input);
     //    stdin().read_line(&mut input).expect("Couldn't read line");
 
@@ -77,7 +83,7 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
 
             match result {
                 AddressType::IPv4 => {
-                    stat.ipv4 += 1;
+                    stat.ipv4_hosts += 1;
                     let mut net = substring.to_owned() + "/32";
                     let net: Ipv4Net = net.parse().unwrap();
                     net_list.push(net);
@@ -87,7 +93,7 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
                     let net: Ipv4Net = substring.parse().unwrap();
                     net_list.push(net);
                 }
-                AddressType::IPv6 => stat.ipv6 += 1,
+                AddressType::IPv6 => stat.ipv6_hosts += 1,
                 _ => {
                     if !substring.starts_with("http") && substring != "" {
                         println!("{}", substring)
@@ -107,8 +113,6 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
     print_sep();
     println!("{:#?}", stat);
 
-    net_list.sort();
-    net_list.dedup();
     net_list
 }
 
@@ -119,10 +123,11 @@ fn check_addr(addr_string: &str) -> AddressType {
     let mut slashes_counter = 0;
     let mut colons_counter = 0;
 
-    if addr_string.len() > 40 {
-        println!("{}", "MORE THAN 40 !!!");
-        return AddressType::None;
-    }
+    //    if addr_string.len() > 40 {
+    //        println!("{}", "MORE THAN 40 !!!");
+    //        println!("{}", addr_string);
+    //        return AddressType::None;
+    //    }
 
     for c in addr_string.chars() {
         if c.is_ascii_digit() {
@@ -184,155 +189,75 @@ fn main() {
 
     let file = File::open(CSV_FILE).unwrap();
 
-    //        let mut net_list = read_file(file);
-    let mut net_list: Vec<Ipv4Net> = vec![
-        "10.0.0.0/32".parse().unwrap(),
-        "10.0.0.1/32".parse().unwrap(),
-        "10.0.0.2/32".parse().unwrap(),
-        "10.0.0.3/32".parse().unwrap(),
-        "10.0.0.4/32".parse().unwrap(),
-        //        "10.0.0.5/32".parse().unwrap(),
-        "10.0.0.6/32".parse().unwrap(),
-        "10.0.0.7/32".parse().unwrap(),
-        "10.0.0.8/32".parse().unwrap(),
-        //        "10.0.0.9/32".parse().unwrap(),
-        //        "10.0.0.10/32".parse().unwrap(),
-        "10.0.0.11/32".parse().unwrap(),
-        //        "10.0.0.12/32".parse().unwrap(),
-        //        "10.0.0.13/32".parse().unwrap(),
-        //        "10.0.0.14/32".parse().unwrap(),
-        "10.0.0.15/32".parse().unwrap(),
-        "10.0.0.16/32".parse().unwrap(),
-        "10.0.1.0/24".parse().unwrap(),
-    ];
-    println!("Records:   {:#?}", net_list.len());
-    println!("Addresses: {:#?}", net_list.size());
-    //    for net in &net_list {
-    //        println!("{:#?} -> {:#?}", net, net.size());
-    //    }
-    //    print_sep();
-    //    print_sep();
+    let mut net_list = read_file(file);
+    let original_stat = Stat {
+        total_file_lines: 0,
+        ipv4_hosts: net_list.size(),
+        ipv4_networks: net_list.len() as u32,
+        ipv6_hosts: 0,
+        ipv6_networks: 0,
+    };
+    print_stat(&net_list, &original_stat);
+    let duration = start.elapsed();
+    println!("Duration:             {:#?}", duration);
+    print_sep();
 
-    //    net_list = Ipv4Net::aggregate(&net_list);
-    //    println!("Records after normalization:   {:#?}", net_list.len());
-    //    println!("Addresses after normalization: {:#?}", net_list.size());
+    net_list.sort();
+    net_list.dedup();
+    println!("after dedup");
+    print_stat(&net_list, &original_stat);
+    let duration = start.elapsed();
+    println!("Duration:             {:#?}", duration);
+    print_sep();
 
-    let prefix = 30;
-    println!("resizing with prefix = {:#?} ...", prefix);
-    let net_list = net_list.resize_with_prefix(prefix);
-    println!("Records after resize:   {:#?}", net_list.len());
-    println!("Addresses after resize: {:#?}", net_list.size());
+    net_list = Ipv4Net::aggregate(&net_list);
+    println!("after normalization");
+    print_stat(&net_list, &original_stat);
+    let duration = start.elapsed();
+    println!("Duration:             {:#?}", duration);
+    print_sep();
 
-    //    let mut intervals: Vec<(_, _)> = networks.iter().map(|n| n.interval()).collect();
-    for net in &net_list {
-        println!("{:#?} -> {:#?}", net, net.size());
+//    let prefix = 30;
+    for prefix in (24..32).rev() {
+        print_sep();
+        println!("resizing with prefix = {:#?} ...", prefix);
+        net_list = net_list.resize_with_prefix(prefix);
+        print_stat(&net_list, &original_stat)
     }
 
     let duration = start.elapsed();
     print_sep();
-    println!("Duration:              {:#?}", duration);
+    println!("Duration:             {:#?}", duration);
 }
 
-trait Next {
-    fn next(self) -> Ipv4Addr;
+fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat) {
+    let s1 = net_list.len().to_string();
+    let s1 = decimal_mark(s1);
+    let s2 = net_list.size().to_string();
+    let s2 = decimal_mark(s2);
+
+    let size = mem::size_of::<Ipv4Net>();
+    let total = size * net_list.len();
+    let total = decimal_mark(total.to_string());
+
+    let nets_p: f32 = net_list.len() as f32 / stats.ipv4_networks as f32 * 100f32;
+    let hosts_p: f32 = net_list.size() as f32 / stats.ipv4_hosts as f32 * 100f32;
+    println!("Nets:    {:>12}       {:>14.1}%", s1, nets_p);
+    println!("Hosts:   {:>12}       {:>14.1}%", s2, hosts_p);
+    println!("Memory:  {:>12}       {:>15}", size, total);
 }
 
-impl Next for Ipv4Addr {
-    fn next(self) -> Ipv4Addr {
-        let mut ip_next = u32::from(self);
-        ip_next += 1;
-        Ipv4Addr::from(ip_next)
-    }
-}
-
-trait NetSize {
-    fn size(&self) -> u32;
-}
-
-trait Resize {
-    fn resize_with_prefix(&mut self, new_prefix: u8) -> Vec<Ipv4Net>;
-}
-
-impl NetSize for Ipv4Net {
-    fn size(&self) -> u32 {
-        let base: u32 = 2;
-        let p: u8 = 32 - self.prefix_len();
-        base.pow(p.into())
-    }
-}
-
-//impl Resize for Ipv4Net {
-//    fn resize_with_prefix(&mut self, new_prefix: u8) -> Vec<Ipv4Net> {}
-//}
-
-impl NetSize for Vec<Ipv4Net> {
-    fn size(&self) -> u32 {
-        let mut total: u32 = 0;
-
-        for n in self.iter() {
-            total += n.size();
+fn decimal_mark(s: String) -> String {
+    let mut result = String::with_capacity(s.len() + ((s.len() - 1) / 3));
+    let mut i = s.len();
+    for c in s.chars() {
+        result.push(c);
+        i -= 1;
+        if i > 0 && i % 3 == 0 {
+            result.push('.');
         }
-        total
     }
+    result
 }
-
-impl Resize for Vec<Ipv4Net> {
-    fn resize_with_prefix(&mut self, new_prefix: u8) -> Vec<Ipv4Net> {
-        let mut index: usize = 0;
-        //        let mut net_buff: Vec<Ipv4Net> = Vec::with_capacity(2);
-        //        let mut new_net: Vec<Ipv4Net> = Vec::new();
-
-        loop {
-            print_sep();
-            println!("index {:#?}", index);
-            for (i, net) in self.iter().enumerate() {
-                println!("{:#?} -> {:#?} -> {:#?}", i, net, net.size());
-            }
-            if index == self.len() - 1 {
-                break;
-            }
-
-            let mut net = self[index];
-            let mut next_net = self[index + 1];
-
-            //            let ip = u32::from(net.broadcast());
-            //            let ip_next = u32::from(next_net.network());
-            let ip = net.broadcast();
-            let ip_next = next_net.network();
-
-            println!("{:#?} -> {:#?}", net, next_net);
-            println!("{:#?} -> {:#?}", net.network(), net.broadcast());
-            println!("{:#?} -> {:#?}", next_net.network(), next_net.broadcast());
-            println!("{:#?} -> {:#?}", ip, ip_next);
-            //            println!("{:#?} -> {:#?}", u32::from(next_net.network()), next_net.broadcast());
-            //            println!("{:#?} -> {:#?}", net, next_net);
-
-            if ip.next() == ip_next {
-                index += 1;
-                continue;
-            }
-
-            self[index] = Ipv4Net::new(ip, new_prefix).unwrap();
-
-            index += 1;
-        }
-
-        print_sep();
-        print_sep();
-        for net in self.iter() {
-            println!("{:#?} -> {:#?}", net, net.size());
-        }
-
-        Ipv4Net::aggregate(&self)
-    }
-}
-
-//
-//fn interval(net: &Ipv4Net) -> (u32, u32) {
-//    (
-//        u32::from(net.network()),
-//        u32::from(net.broadcast()).saturating_add(1),
-//    )
-//}
 
 //        let _: () = self;
