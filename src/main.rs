@@ -6,12 +6,17 @@
 
 use std::any::type_name;
 use std::fs::File;
-use std::io::{stdin, BufRead, BufReader, Read};
+use std::io::{stdin, BufRead, BufReader, Read, Write};
 use std::mem;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::process::exit;
 use std::slice::Split;
 use std::time::{Duration, Instant};
+use std::path::Path;
+use std::error::Error;
+use std::io::LineWriter;
+use std::fs::OpenOptions;
+
 
 use encoding_rs::mem::ensure_utf16_validity;
 use encoding_rs::WINDOWS_1251;
@@ -21,7 +26,17 @@ use ipnet::{IpNet, Ipv4Net, Ipv6Net};
 use netlist_generator::NetSize;
 use netlist_generator::Resize;
 
-const CSV_FILE: &str = "A:\\dump2.csv";
+//const CSV_FILE: &str = "A:\\dump2.csv";
+
+//const CSV_FILE: &str = "dump.csv";
+//const OUT_FILE: &str = "norm_list.txt";
+
+const CSV_FILE: &str = "/root/z-i/dump.csv";
+const OUT_FILE: &str = "/etc/bird/norm_list.txt";
+
+const ROUTES_MAX: usize = 300_000;
+const ROUTE_TEMPLATE: &str = "route {} reject;";
+
 
 fn print_sep() {
     println!("{}", "=".repeat(80));
@@ -114,6 +129,23 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
     println!("{:#?}", stat);
 
     net_list
+}
+
+fn write_file(ip_list: Vec<Ipv4Net>) {
+    // Create a path to the desired file
+    let path = Path::new(OUT_FILE);
+
+    let mut file = OpenOptions::new()
+        .read(false)
+        .write(true)
+        .create(true)
+        .append(false)
+        .open(&path).unwrap();
+
+    for net in ip_list {
+        let line = format!("route {} reject;\n", net);
+        file.write_all(line.as_bytes());
+    }
 }
 
 fn check_addr(addr_string: &str) -> AddressType {
@@ -222,12 +254,19 @@ fn main() {
         print_sep();
         println!("resizing with prefix = {:#?} ...", prefix);
         net_list = net_list.resize_with_prefix(prefix);
-        print_stat(&net_list, &original_stat)
+        print_stat(&net_list, &original_stat);
+
+        if net_list.len() <= ROUTES_MAX {
+            break;
+        }
     }
 
     let duration = start.elapsed();
     print_sep();
     println!("Duration:             {:#?}", duration);
+    println!("Writing results to file... ");
+
+    write_file(net_list);
 }
 
 fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat) {
