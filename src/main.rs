@@ -251,14 +251,14 @@ fn main() {
 
 //    let prefix = 30;
     for prefix in (24..32).rev() {
+        if net_list.len() <= ROUTES_MAX {
+            break;
+        }
+
         print_sep();
         println!("resizing with prefix = {:#?} ...", prefix);
         net_list = net_list.resize_with_prefix(prefix);
         print_stat(&net_list, &original_stat);
-
-        if net_list.len() <= ROUTES_MAX {
-            break;
-        }
     }
 
     let duration = start.elapsed();
