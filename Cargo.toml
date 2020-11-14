@@ -7,10 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-encoding_rs = "0.8.22"
-encoding_rs_io = "0.1.6"
+encoding_rs = "0.8.26"
+encoding_rs_io = "0.1.7"
 #ipnetwork = "0.16.0"
-ipnet = "2.1.0"
+ipnet = "2.3.0"
 #color-backtrace = "0.3.0"
 
 [profile.dev]
@@ -34,7 +34,7 @@ lto = true
 debug-assertions = false
 codegen-units = 16
 panic = 'unwind'
-incremental = false
+incremental = true
 overflow-checks = false
 
 [profile.test]
