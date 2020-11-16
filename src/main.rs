@@ -13,6 +13,7 @@ use std::process::exit;
 use std::slice::Split;
 use std::time::{Duration, Instant};
 
+use clap::{crate_authors, crate_version, Clap};
 use encoding_rs::mem::ensure_utf16_validity;
 use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
@@ -25,22 +26,22 @@ use std::fmt::format;
 use std::iter::Inspect;
 use std::path::Path;
 
-const CSV_FILE: &str = "A:\\dump2.csv";
-const OUT_FILE: &str = "A:\\dump2.txt";
-const PREFIX: u8 = 24;
-const MAX_ROUTES: u32 = 300_000;
+// const CSV_FILE: &str = "A:\\dump2.csv";
+// const OUT_FILE: &str = "A:\\dump2.txt";
+// const PREFIX: u8 = 24;
+// const MAX_ROUTES: u32 = 300_000;
 
-fn type_of<T>(_: T) -> &'static str {
-    type_name::<T>()
-}
+// fn type_of<T>(_: T) -> &'static str {
+//     type_name::<T>()
+// }
 
-// struct for statistics of the file
+// struct for statistics of the input file
 #[derive(Debug, Default)]
 struct Stat {
     total_file_lines: u32,
     ipv4_hosts: u32,
     ipv4_networks: u32,
-    ipv6_hosts: u32,
+    ipv6_hosts: u32, // isn't supported
     ipv6_networks: u32, // isn't supported
 }
 
@@ -207,7 +208,10 @@ fn main() {
     println!("RKN-NETLIST NORMALIZER/AGGREGATOR V1.0");
     print_sep();
 
-    let file = File::open(CSV_FILE).unwrap();
+    let options = parse_cmd_args();
+
+    // let file = File::open(CSV_FILE).unwrap();
+    let file = File::open(&options.input).unwrap();
 
     let mut net_list = read_file(file);
     let original_stat = Stat {
@@ -222,17 +226,45 @@ fn main() {
     let timestamp = Instant::now();
     net_list.sort();
     net_list.dedup();
-    println!("after dedup");
+    println!("AFTER DEDUP");
     print_stat(&net_list, &original_stat, timestamp);
 
     let timestamp = Instant::now();
     net_list = Ipv4Net::aggregate(&net_list);
-    println!("after normalization");
+    println!("AFTER NORMALIZATION");
     print_stat(&net_list, &original_stat, timestamp);
 
-    for prefix in (PREFIX..32).rev() {
-        print_sep();
-        println!("resizing with prefix = {:#?} ...", prefix);
+    let mut net_mask: u8 = 0;
+    let mut routes_max: u32 = 0;
+
+    match options {
+        // if net_mask and routes_max are not set -> exit
+        Options { net_mask: a @ None, routes_max: b @ None, ..} => {
+            println!("type1 = {:#?} {:#?}", a, b);
+            exit(0);
+        },
+        // if only routes_max is set
+        Options { net_mask: a @ None, routes_max: b, ..} => {
+            println!("type2 = {:#?} {:#?}", a, b);
+            // net_mask = 0;
+            routes_max = u32::MAX;
+        },
+        // if only net_mask is set
+        Options { net_mask: a, routes_max: b @ None, ..} => {
+            println!("type3 = {:#?} {:#?}", a, b);
+            net_mask = a.unwrap();
+            // routes_max = 0;
+        },
+        _ => println!("type000")
+    }
+
+    // for prefix in (PREFIX..32).rev() {
+    for prefix in (net_mask..32).rev() {
+        if net_list.len() <= routes_max as usize {
+            break
+        }
+
+        println!("RESIZING WITH PREFIX = {:#?} ...", prefix);
         let timestamp = Instant::now();
         net_list = net_list.resize_with_prefix(prefix);
         print_stat(&net_list, &original_stat, timestamp);
@@ -241,11 +273,51 @@ fn main() {
     print_sep();
     println!("Duration: {:#?}", start_timestamp.elapsed());
 
-    write_file(net_list);
+    write_file(net_list, &options.output);
 }
 
-fn parse_cmd_args() {
-    exit(1);
+fn parse_cmd_args() -> Options {
+    let opts = Options::parse();
+    println!("options: {:#?}", opts);
+    opts
+}
+
+fn check_args_netmask(net_mask: &str) -> Result<(), String> {
+    let net_mask = net_mask.parse::<u8>();
+
+    return match net_mask {
+        Ok(net_mask @ 1..=31) => Ok(()),
+        _ => Err(String::from("aggregation netmask must be between 31 and 1")),
+    };
+}
+
+fn check_args_routes(routes_count: &str) -> Result<(), String> {
+    let routes_count = routes_count.parse::<u32>();
+
+    return match routes_count {
+        Ok(routes_count @ 1..=u32::MAX) => Ok(()),
+        _ => Err(String::from("amount of routes must be > 0")),
+    };
+}
+
+#[derive(Clap, Debug)]
+#[clap(
+    version = crate_version!(),
+    author = crate_authors!(),
+    about = "aggregate networks with this netmask (from /31 to /1)"
+)]
+struct Options {
+    #[clap(short = 'i', long, default_value = "dump.csv")]
+    input: String,
+
+    #[clap(short = 'o', long, default_value = "routes.txt")]
+    output: String,
+
+    #[clap(short = 'm', long, validator = check_args_netmask, about = "aggregate networks with this netmask (from /31 to /1)")]
+    net_mask: Option<u8>,
+
+    #[clap(short = 'r', long, validator = check_args_routes, about = "maximum amount of routes in output file")]
+    routes_max: Option<u32>,
 }
 
 fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant) {
@@ -281,8 +353,9 @@ fn decimal_mark(s: String) -> String {
     result
 }
 
-fn write_file(ip_list: Vec<Ipv4Net>) {
-    let path = Path::new(OUT_FILE);
+fn write_file(ip_list: Vec<Ipv4Net>, out_file: &str) {
+    // let path = Path::new(OUT_FILE);
+    let path = Path::new(out_file);
 
     let mut file = OpenOptions::new()
         .write(true)
