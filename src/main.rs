@@ -4,6 +4,9 @@
 #![allow(unused_mut)]
 #![allow(unreachable_code)]
 
+mod argparse;
+mod address;
+
 use std::any::type_name;
 use std::fs::{File, OpenOptions};
 use std::io::{stdin, BufRead, BufReader, Read, Write};
@@ -13,7 +16,6 @@ use std::process::exit;
 use std::slice::Split;
 use std::time::{Duration, Instant};
 
-use clap::{crate_authors, crate_version, Clap};
 use encoding_rs::mem::ensure_utf16_validity;
 use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
@@ -25,11 +27,7 @@ use netlist_generator::Resize;
 use std::fmt::format;
 use std::iter::Inspect;
 use std::path::Path;
-
-// const CSV_FILE: &str = "A:\\dump2.csv";
-// const OUT_FILE: &str = "A:\\dump2.txt";
-// const PREFIX: u8 = 24;
-// const MAX_ROUTES: u32 = 300_000;
+use std::ops::Add;
 
 // fn type_of<T>(_: T) -> &'static str {
 //     type_name::<T>()
@@ -41,12 +39,11 @@ struct Stat {
     total_file_lines: u32,
     ipv4_hosts: u32,
     ipv4_networks: u32,
-    ipv6_hosts: u32, // isn't supported
+    ipv6_hosts: u32,    // isn't supported
     ipv6_networks: u32, // isn't supported
 }
 
 fn read_file(file: File) -> Vec<Ipv4Net> {
-    //    color_backtrace::install();
     println!("reading file...");
 
     let mut stat: Stat = Default::default();
@@ -70,28 +67,27 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
         let file_line = file_line.unwrap();
 
         for substring in file_line.split(" | ") {
-            // println!("{}", "=".repeat(20));
             // println!("{:#?}", substring);
             // println!("{:#?}", type_of(substring));
 
             let substring: &str = substring.split(';').next().unwrap();
             // println!("{:#?}", substring);
 
-            let result = check_addr(substring);
+            let result = address::check_addr(substring);
 
             match result {
-                AddressType::IPv4 => {
+                address::AddressType::IPv4 => {
                     stat.ipv4_hosts += 1;
                     let mut net = substring.to_owned() + "/32";
                     let net: Ipv4Net = net.parse().unwrap();
                     net_list.push(net);
                 }
-                AddressType::IPv4Net => {
+                address::AddressType::IPv4Net => {
                     stat.ipv4_networks += 1;
                     let net: Ipv4Net = substring.parse().unwrap();
                     net_list.push(net);
                 }
-                AddressType::IPv6 => stat.ipv6_hosts += 1,
+                address::AddressType::IPv6 => stat.ipv6_hosts += 1,
                 _ => {
                     if !substring.starts_with("http") && substring != "" {
                         println!("{}", substring)
@@ -141,64 +137,7 @@ fn read_file(file: File) -> Vec<Ipv4Net> {
     net_list
 }
 
-fn check_addr(addr_string: &str) -> AddressType {
-    let mut digits_counter: u32 = 0;
-    let mut letters_counter: u32 = 0;
-    let mut dots_counter: u32 = 0;
-    let mut slashes_counter: u32 = 0;
-    let mut colons_counter: u32 = 0;
 
-    for c in addr_string.chars() {
-        if c.is_ascii_digit() {
-            digits_counter += 1;
-        } else if c == '.' {
-            dots_counter += 1;
-        // mind the order of is_ascii_digit and is_ascii_hexdigit checks
-        } else if c.is_ascii_hexdigit() {
-            letters_counter += 1;
-        } else if c == ':' {
-            colons_counter += 1;
-        } else if c == '/' {
-            slashes_counter += 1;
-        } else {
-            return AddressType::None;
-        }
-    }
-
-    // ipv4
-    if slashes_counter == 0
-        && dots_counter == 3
-        && colons_counter == 0
-        && digits_counter >= 4
-        && digits_counter <= 12
-    {
-        return AddressType::IPv4;
-    // ipv6
-    } else if colons_counter == 7
-        && slashes_counter == 0
-        && dots_counter == 0
-        && (digits_counter + letters_counter) == 32
-    {
-        return AddressType::IPv6;
-    // ipv4 subnet
-    } else if slashes_counter == 1
-        && dots_counter == 3
-        && colons_counter == 0
-        && digits_counter >= 5
-        && digits_counter <= 14
-    {
-        return AddressType::IPv4Net;
-    }
-
-    AddressType::None
-}
-
-enum AddressType {
-    None,
-    IPv4,
-    IPv4Net,
-    IPv6,
-}
 
 fn main() {
     //    color_backtrace::install();
@@ -208,9 +147,8 @@ fn main() {
     println!("RKN-NETLIST NORMALIZER/AGGREGATOR V1.0");
     print_sep();
 
-    let options = parse_cmd_args();
+    let options = argparse::parse_cmd_args();
 
-    // let file = File::open(CSV_FILE).unwrap();
     let file = File::open(&options.input).unwrap();
 
     let mut net_list = read_file(file);
@@ -234,32 +172,34 @@ fn main() {
     println!("AFTER NORMALIZATION");
     print_stat(&net_list, &original_stat, timestamp);
 
-    let mut net_mask: u8 = 0;
+    let mut min_net_mask: u8 = 0;
+    let mut max_net_mask: u8 = 32;
     let mut routes_max: u32 = 0;
 
     match options {
         // if net_mask and routes_max are not set -> exit
-        Options { net_mask: a @ None, routes_max: b @ None, ..} => {
-            println!("type1 = {:#?} {:#?}", a, b);
+        argparse::Options { net_mask: a @ None, routes_max: b @ None, ..} => {
+            // println!("type1 = {:#?} {:#?}", a, b);
+            write_file(net_list, &options.output);
             exit(0);
         },
         // if only routes_max is set
-        Options { net_mask: a @ None, routes_max: b, ..} => {
-            println!("type2 = {:#?} {:#?}", a, b);
+        argparse::Options { net_mask: None, routes_max: b, ..} => {
+            // println!("type2 = {:#?} {:#?}", a, b);
             // net_mask = 0;
-            routes_max = u32::MAX;
+            routes_max = b.unwrap();
         },
         // if only net_mask is set
-        Options { net_mask: a, routes_max: b @ None, ..} => {
-            println!("type3 = {:#?} {:#?}", a, b);
-            net_mask = a.unwrap();
-            // routes_max = 0;
+        argparse::Options { net_mask: a, routes_max: b @ None, ..} => {
+            // println!("type3 = {:#?} {:#?}", a, b);
+            min_net_mask = a.unwrap();
+            max_net_mask = min_net_mask;
+            // routes_max = u32::MAX;
         },
         _ => println!("type000")
     }
 
-    // for prefix in (PREFIX..32).rev() {
-    for prefix in (net_mask..32).rev() {
+    for prefix in (min_net_mask..max_net_mask).rev() {
         if net_list.len() <= routes_max as usize {
             break
         }
@@ -276,50 +216,6 @@ fn main() {
     write_file(net_list, &options.output);
 }
 
-fn parse_cmd_args() -> Options {
-    let opts = Options::parse();
-    println!("options: {:#?}", opts);
-    opts
-}
-
-fn check_args_netmask(net_mask: &str) -> Result<(), String> {
-    let net_mask = net_mask.parse::<u8>();
-
-    return match net_mask {
-        Ok(net_mask @ 1..=31) => Ok(()),
-        _ => Err(String::from("aggregation netmask must be between 31 and 1")),
-    };
-}
-
-fn check_args_routes(routes_count: &str) -> Result<(), String> {
-    let routes_count = routes_count.parse::<u32>();
-
-    return match routes_count {
-        Ok(routes_count @ 1..=u32::MAX) => Ok(()),
-        _ => Err(String::from("amount of routes must be > 0")),
-    };
-}
-
-#[derive(Clap, Debug)]
-#[clap(
-    version = crate_version!(),
-    author = crate_authors!(),
-    about = "aggregate networks with this netmask (from /31 to /1)"
-)]
-struct Options {
-    #[clap(short = 'i', long, default_value = "dump.csv")]
-    input: String,
-
-    #[clap(short = 'o', long, default_value = "routes.txt")]
-    output: String,
-
-    #[clap(short = 'm', long, validator = check_args_netmask, about = "aggregate networks with this netmask (from /31 to /1)")]
-    net_mask: Option<u8>,
-
-    #[clap(short = 'r', long, validator = check_args_routes, about = "maximum amount of routes in output file")]
-    routes_max: Option<u32>,
-}
-
 fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant) {
     let s1 = net_list.len().to_string();
     let s1 = decimal_mark(s1);
@@ -333,10 +229,9 @@ fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant) {
     let nets_p: f32 = net_list.len() as f32 / stats.ipv4_networks as f32 * 100f32; // fixme div by 0
     let hosts_p: f32 = net_list.size() as f32 / stats.ipv4_hosts as f32 * 100f32; // fixme div by 0
 
-    println!("Nets:    {:>12}       {:>14.1}%", s1, nets_p);
-    println!("Hosts:   {:>12}       {:>14.1}%", s2, hosts_p);
-    println!("Memory:  {:>12}       {:>13} Kb", size, total);
-    println!("Duration:  {:#?}", start_time.elapsed());
+    let mut line = format!("Nets:   {:>12} ({:>6.1}%)   Hosts:  {:>12} ({:>6.1}%)", s1, nets_p, s2, hosts_p);
+    let line = line.add(&format!("     Memory: {:>2}   {:>6} Kb   Duration:  {:#?}", size, total, start_time.elapsed()));
+    println!("{}", line);
     print_sep();
 }
 
@@ -354,7 +249,6 @@ fn decimal_mark(s: String) -> String {
 }
 
 fn write_file(ip_list: Vec<Ipv4Net>, out_file: &str) {
-    // let path = Path::new(OUT_FILE);
     let path = Path::new(out_file);
 
     let mut file = OpenOptions::new()

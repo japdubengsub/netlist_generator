@@ -95,7 +95,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_resize___aggr() {
+    fn test_no_resize_aggr() {
         let mut net_list: Vec<Ipv4Net> = vec![
             "10.0.0.0/32".parse().unwrap(),
             "10.0.0.1/32".parse().unwrap(),
@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_resize___not_aggr() {
+    fn test_no_resize_not_aggr() {
         let mut net_list: Vec<Ipv4Net> = vec![
             "10.0.0.1/32".parse().unwrap(),
             "10.0.0.2/32".parse().unwrap(),
@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resize___aggr() {
+    fn test_resize_aggr() {
         let mut net_list: Vec<Ipv4Net> = vec![
             "10.0.0.1/32".parse().unwrap(),
             "10.0.0.2/32".parse().unwrap(),
@@ -135,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resize___aggr2() {
+    fn test_resize_aggr2() {
         let mut net_list: Vec<Ipv4Net> = vec![
             "10.0.0.0/32".parse().unwrap(),
             "10.0.0.2/32".parse().unwrap(),
@@ -149,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resize___aggr3() {
+    fn test_resize_aggr3() {
         let mut net_list: Vec<Ipv4Net> = vec![
             "10.0.0.0/32".parse().unwrap(),
             "10.0.0.4/32".parse().unwrap(),
@@ -163,7 +163,21 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    fn test_resize_aggr4() {
+        let mut net_list: Vec<Ipv4Net> = vec![
+            "10.0.0.0/32".parse().unwrap(),
+            "10.0.0.4/32".parse().unwrap(),
+            "10.0.1.10/25".parse().unwrap(),
+        ];
+        let answer: Vec<Ipv4Net> = vec![
+            "10.0.0.0/23".parse().unwrap(),
+        ];
+
+        assert_eq!(Vec::<Ipv4Net>::resize_with_prefix(&mut net_list, 24), answer)
+    }
+
+    #[test]
+    // #[ignore]
     fn test_empty() {
         let mut net_list: Vec<Ipv4Net> = vec![
         ];
