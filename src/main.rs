@@ -1,40 +1,15 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-#![allow(unreachable_code)]
+use std::cmp::max;
+use std::fs::{File, OpenOptions};
+use std::time::{Duration, Instant};
+
+use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+
+use fileops::{print_sep, print_stat, read_file, write_file, Stat};
+use netlist_generator::{NetSize, Resize};
 
 mod address;
 mod argparse;
 mod fileops;
-
-// use std::any::type_name;
-use std::fs::{File, OpenOptions};
-// use std::io::{stdin, BufRead, BufReader, BufWriter, Read, Write};
-// use std::mem;
-// use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
-// use std::process::exit;
-// use std::slice::Split;
-use fileops::{print_sep, print_stat, read_file, write_file, Stat};
-use std::time::{Duration, Instant};
-
-// use encoding_rs::mem::ensure_utf16_validity;
-// use encoding_rs::WINDOWS_1251;
-// use encoding_rs_io::{DecodeReaderBytes, DecodeReaderBytesBuilder};
-use ipnet::{IpNet, Ipv4Net, Ipv6Net};
-//
-// use netlist_generator::print_sep;
-use netlist_generator::NetSize;
-use netlist_generator::Resize;
-use std::cmp::max;
-// use std::fmt::{format, Debug};
-// use std::iter::Inspect;
-// use std::ops::Add;
-// use std::path::Path;
-
-// fn type_of<T>(_: T) -> &'static str {
-//     type_name::<T>()
-// }
 
 fn main() {
     let start_timestamp = Instant::now();
@@ -83,7 +58,7 @@ fn main() {
         }
     }
 
-    for prefix in (min_net_mask..max_net_mask+1).rev() {
+    for prefix in (min_net_mask..max_net_mask + 1).rev() {
         if net_list.len() <= routes_max {
             break;
         }

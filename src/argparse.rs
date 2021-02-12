@@ -22,7 +22,6 @@ pub struct Options {
 
 pub fn parse_cmd_args() -> Options {
     let opts = Options::parse();
-    // println!("options: {:#?}", opts);
     opts
 }
 

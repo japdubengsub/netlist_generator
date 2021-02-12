@@ -46,24 +46,14 @@ pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
         .build(file);
     let file_reader = BufReader::new(transcoded);
 
-    // let mut net_list: Vec<Ipv4Net> = Vec::with_capacity(3_000_000);
     let mut net_list: Vec<Ipv4Net> = Vec::new();
-
-    // todo
-    // will use 1 cache/previous value as input filter
-    // let mut prev_line: &str = "";
-    // let mut prev_line: String: = "";
 
     for file_line in file_reader.lines() {
         stat.total_file_lines += 1;
         let file_line = file_line.unwrap();
 
         for substring in file_line.split(" | ") {
-            // println!("{:#?}", substring);
-            // println!("{:#?}", type_of(substring));
-
             let substring: &str = substring.split(';').next().unwrap();
-            // println!("{:#?}", substring);
 
             let result = address::check_addr(substring);
 
@@ -81,7 +71,6 @@ pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
                 }
                 address::AddressType::IPv6 => {
                     stat.ipv6_hosts += 1;
-                    // println!("IPV6: {}", substring);
                 },
                 _ => {
                     if !substring.starts_with("http") && substring != "" {
@@ -90,15 +79,6 @@ pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
                 }
             };
         }
-
-        // prev_line = &file_line;
-        // println!("hello {}", &prev_line);
-
-        // fixme remove
-        // if stat.total_file_lines >= 5 {
-        //     exit(101);
-        //     break;
-        // }
     }
 
     println!("Reading finished.");
