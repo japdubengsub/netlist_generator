@@ -12,16 +12,17 @@ encoding_rs = "0.8.26"
 encoding_rs_io = "0.1.7"
 #ipnetwork = "0.16.0"
 ipnet = "2.3.0"
-#color-backtrace = "0.3.0"
+#rand = "0.8.2"
 
 [profile.dev]
 #opt-level = 0
-opt-level = 3
+#opt-level = 3
+opt-level = 2
 debug = true
 debug-assertions = true
 overflow-checks = true
-#lto = false
-lto = true
+lto = false
+#lto = true
 panic = 'unwind'
 incremental = true
 codegen-units = 16  # Note: ignored because `incremental` is enabled.
@@ -29,13 +30,16 @@ rpath = false
 
 [profile.release]
 opt-level = 3
-debug = false
+#debug = false
+debug = 1
 rpath = false
 #lto = false
 lto = true
 debug-assertions = false
-codegen-units = 16
-panic = 'unwind'
+#codegen-units = 16
+codegen-units = 1
+#panic = 'unwind'
+panic = 'abort'
 #incremental = true
 incremental = false
 overflow-checks = false
@@ -59,8 +63,9 @@ overflow-checks = false
 #lto = false
 lto = true
 #panic = 'unwind'    # This setting is always ignored.
+#panic = 'abort'    # This setting is always ignored.
 incremental = false
 #codegen-units = 16
 codegen-units = 1
 rpath = false
-
+#rustflags = ["-C", "target-cpu=native"]

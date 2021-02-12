@@ -145,7 +145,7 @@ fn test_resize_aggr3(b: &mut Bencher) {
 
 #[bench]
 fn test_resize_aggr4(b: &mut Bencher) {
-    let mut net_list: Vec<Ipv4Net> = vec![
+    let net_list: Vec<Ipv4Net> = vec![
         "10.0.0.0/32".parse().unwrap(),
         "10.0.0.4/32".parse().unwrap(),
         "10.0.1.10/25".parse().unwrap(),
@@ -154,7 +154,7 @@ fn test_resize_aggr4(b: &mut Bencher) {
     //     "10.0.0.0/23".parse().unwrap(),
     // ];
 
-    b.iter(|| Vec::<Ipv4Net>::resize_with_prefix(&mut net_list, 24))
+    b.iter(|| Vec::<Ipv4Net>::resize_with_prefix(&mut net_list.clone(), 24))
 }
 
 #[bench]

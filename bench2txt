@@ -1,0 +1,61 @@
+C:/Users/rbr/.cargo/bin/cargo.exe +nightly bench --color=always
+    Finished bench [optimized] target(s) in 1m 08s
+     Running target\release\deps\netlist_generator-c45e2145c3166557.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running target\release\deps\netlist_generator-d94ceb359723491c.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running target\release\deps\bench-17c0f04a185a562c.exe
+
+running 4 tests
+test bench_check_addr_ip4           ... bench:          17 ns/iter (+/- 1)
+test bench_check_addr_ip4_subnet    ... bench:          23 ns/iter (+/- 1)
+test bench_check_addr_ip6           ... bench:          50 ns/iter (+/- 2)
+test bench_check_addr_wrong_address ... bench:          25 ns/iter (+/- 1)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 4 measured; 0 filtered out; finished in 19.21s
+
+     Running target\release\deps\bench2-f618bbb7ba1c95f7.exe
+
+running 14 tests
+test bench_clone_vec         ... bench:          62 ns/iter (+/- 5)
+test bench_get_data          ... bench:         336 ns/iter (+/- 38)
+test prefix30                ... bench:       6,339 ns/iter (+/- 459)
+test prefix31                ... bench:       5,393 ns/iter (+/- 428)
+test prefix32                ... bench:       3,540 ns/iter (+/- 229)
+test prefix_none             ... bench:       2,434 ns/iter (+/- 146)
+test test_empty              ... bench:         104 ns/iter (+/- 8)
+test test_just_one           ... bench:         371 ns/iter (+/- 29)
+test test_no_resize_aggr     ... bench:         619 ns/iter (+/- 41)
+test test_no_resize_not_aggr ... bench:         639 ns/iter (+/- 48)
+test test_resize_aggr        ... bench:         868 ns/iter (+/- 49)
+test test_resize_aggr2       ... bench:       2,830 ns/iter (+/- 227)
+test test_resize_aggr3       ... bench:       1,620 ns/iter (+/- 164)
+test test_resize_aggr4       ... bench:       2,856 ns/iter (+/- 208)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 14 measured; 0 filtered out; finished in 60.93s
+
+     Running target\release\deps\bench3-8c1afb7d740fb57f.exe
+
+running 9 tests
+test bench_write_file        ... bench:   9,472,105 ns/iter (+/- 515,103)
+test bench_write_file2       ... bench:   7,382,990 ns/iter (+/- 473,157)
+test bench_write_file3       ... bench:   7,499,200 ns/iter (+/- 700,324)
+test format_url_array_concat ... bench:          73 ns/iter (+/- 5)
+test format_url_concat       ... bench:         325 ns/iter (+/- 34)
+test format_url_macro        ... bench:         193 ns/iter (+/- 22)
+test format_url_push         ... bench:          64 ns/iter (+/- 5)
+test format_url_vec_concat   ... bench:         130 ns/iter (+/- 9)
+test format_url_write        ... bench:          92 ns/iter (+/- 16)
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 9 measured; 0 filtered out; finished in 47.76s
+
+
+Process finished with exit code 0
