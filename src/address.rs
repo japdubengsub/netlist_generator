@@ -38,10 +38,12 @@ pub fn check_addr(addr_string: &str) -> AddressType {
     {
         return AddressType::IPv4;
     // ipv6
-    } else if colons_counter == 7
+    } else if colons_counter >= 3
+        && colons_counter <= 7
         && slashes_counter == 0
         && dots_counter == 0
-        && (digits_counter + letters_counter) == 32
+        && (digits_counter + letters_counter) <= 32
+        && (digits_counter + letters_counter) >= 8
     {
         return AddressType::IPv6;
     // ipv4 subnet
