@@ -119,7 +119,3 @@ impl Resize for Vec<Ipv4Net> {
         return out;
     }
 }
-
-pub fn print_sep() {
-    println!("{}", "=".repeat(120));
-}
