@@ -1,11 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-#![allow(unreachable_code)]
-
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::mem;
 use std::ops::Add;
 use std::path::Path;
@@ -33,7 +27,6 @@ pub struct Stat {
 }
 
 pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
-
     let file = File::open(file_path).unwrap();
 
     println!("Reading file...");
@@ -55,25 +48,25 @@ pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
         for substring in file_line.split(" | ") {
             let substring: &str = substring.split(';').next().unwrap();
 
-            let result = address::check_addr(substring);
+            let result = check_addr(substring);
 
             match result {
-                address::AddressType::IPv4 => {
+                AddressType::IPv4 => {
                     stat.ipv4_hosts += 1;
-                    let mut net = substring.to_owned() + "/32";
+                    let net = substring.to_owned() + "/32";
                     let net: Ipv4Net = net.parse().unwrap();
                     net_list.push(net);
                 }
-                address::AddressType::IPv4Net => {
+                AddressType::IPv4Net => {
                     stat.ipv4_networks += 1;
                     let net: Ipv4Net = substring.parse().unwrap();
                     net_list.push(net);
                 }
-                address::AddressType::IPv6 => {
+                AddressType::IPv6 => {
                     stat.ipv6_hosts += 1;
-                },
+                }
                 _ => {
-                    if !substring.starts_with("http") && substring != "" {
+                    if !substring.starts_with("http") && !substring.is_empty() {
                         println!("Unknown address: {}", substring)
                     }
                 }
@@ -130,58 +123,6 @@ pub fn write_file(ip_list: Vec<Ipv4Net>, out_file: &str) {
     }
 }
 
-pub fn write_file2(ip_list: Vec<Ipv4Net>, out_file: &str) {
-    let path = Path::new(out_file);
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .append(false)
-        .open(path)
-        .unwrap();
-
-    let mut file = BufWriter::new(file);
-
-    for net in ip_list {
-        let line = format!("route {:#?} reject;\n", net);
-        file.write_all(line.as_bytes())
-            .expect("Couldn't write to file");
-    }
-
-    let _ = file.flush();
-}
-
-pub fn write_file3(ip_list: &Vec<Ipv4Net>, out_file: &str) {
-    let path = Path::new(out_file);
-
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .append(false)
-        .open(path)
-        .unwrap();
-
-    let mut file = BufWriter::new(file);
-
-    // let mut line = String::with_capacity(16 + 18);
-    let mut line = String::with_capacity(50);
-    let part1 = &"route ".to_string();
-    let part2 = &" reject;\n".to_string();
-
-    for net in ip_list {
-        line.clear();
-        line.push_str(part1);
-        line.push_str(&net.to_string());
-        line.push_str(part2);
-
-        file.write(line.as_bytes()).expect("Couldn't write to file");
-    }
-
-    let _ = file.flush();
-}
-
 pub fn print_sep() {
     println!("{}", "=".repeat(120));
 }
@@ -199,7 +140,7 @@ pub fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant) {
     let nets_p: f32 = net_list.len() as f32 / stats.ipv4_networks as f32 * 100f32; // fixme div by 0
     let hosts_p: f32 = net_list.size() as f32 / stats.ipv4_hosts as f32 * 100f32; // fixme div by 0
 
-    let mut line = format!(
+    let line = format!(
         "Nets: {:>12} ({:>4.1}%)   Hosts:  {:>12} ({:>4.1}%)",
         s1, nets_p, s2, hosts_p
     );

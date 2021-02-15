@@ -1,13 +1,10 @@
-use std::cmp::max;
-use std::fs::{File, OpenOptions};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
-use ipnet::{IpNet, Ipv4Net, Ipv6Net};
+use ipnet::Ipv4Net;
 
-use fileops::{print_sep, print_stat, read_file, write_file, Stat};
+use fileops::{print_sep, print_stat, read_file, Stat, write_file};
 use netlist_generator::{NetSize, Resize};
 
-mod address;
 mod argparse;
 mod fileops;
 
@@ -33,9 +30,8 @@ fn main() {
 
     let timestamp = Instant::now();
     net_list.sort();
-    // net_list.sort_unstable();
     net_list.dedup();
-    println!("AFTER SORT+DEDUP");
+    println!("AFTER SORT + DEDUP");
     print_stat(&net_list, &original_stat, timestamp);
 
     let timestamp = Instant::now();
@@ -43,7 +39,7 @@ fn main() {
     println!("AFTER NORMALIZATION");
     print_stat(&net_list, &original_stat, timestamp);
 
-    let mut min_net_mask: u8;
+    let min_net_mask: u8;
     let mut max_net_mask: u8 = 31;
     let mut routes_max: usize = 0;
 
@@ -75,5 +71,5 @@ fn main() {
     println!("Duration: {:#?}", timestamp.elapsed());
 
     print_sep();
-    println!("Duration: {:#?}", start_timestamp.elapsed());
+    println!("Total time: {:#?}", start_timestamp.elapsed());
 }

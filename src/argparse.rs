@@ -21,24 +21,23 @@ pub struct Options {
 }
 
 pub fn parse_cmd_args() -> Options {
-    let opts = Options::parse();
-    opts
+    Options::parse()
 }
 
 fn check_args_netmask(net_mask: &str) -> Result<(), String> {
     let net_mask = net_mask.parse::<u8>();
 
-    return match net_mask {
-        Ok(net_mask @ 1..=31) => Ok(()),
-        _ => Err(String::from("aggregation netmask must be between 31 and 1")),
-    };
+    match net_mask {
+        Ok(_net_mask @ 1..=31) => Ok(()),
+        _ => Err(String::from("aggregation netmask must be between 31 and 1")), // fixme check rfc
+    }
 }
 
 fn check_args_routes(routes_count: &str) -> Result<(), String> {
     let routes_count = routes_count.parse::<u32>();
 
-    return match routes_count {
-        Ok(routes_count @ 1..=u32::MAX) => Ok(()),
+    match routes_count {
+        Ok(_routes_count @ 1..=u32::MAX) => Ok(()),
         _ => Err(String::from("amount of routes must be > 0")),
-    };
+    }
 }

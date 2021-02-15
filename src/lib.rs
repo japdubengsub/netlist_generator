@@ -1,5 +1,4 @@
-use std::cmp::{max, min};
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::cmp::max;
 
 use ipnet::Ipv4Net;
 
@@ -37,7 +36,7 @@ impl Resize for Vec<Ipv4Net> {
         net_buff.push(net_buff[0]);
 
         // amount of iterations
-        let mut range = max(self.len(), 1) - 1;
+        let range = max(self.len(), 1) - 1;
 
         for index in 0..range {
             let mut current_net = self[index];
@@ -75,8 +74,7 @@ impl Resize for Vec<Ipv4Net> {
             }
         }
 
-        let mut out = Ipv4Net::aggregate(&self);
+        Ipv4Net::aggregate(&self)
 
-        return out;
     }
 }
