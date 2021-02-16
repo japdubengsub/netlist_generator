@@ -1,7 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::mem;
-use std::ops::Add;
 use std::path::Path;
 use std::time::Instant;
 
@@ -9,12 +8,11 @@ use encoding_rs::WINDOWS_1251;
 use encoding_rs_io::DecodeReaderBytesBuilder;
 use ipnet::Ipv4Net;
 
+use address::{AddressType, check_addr};
 use netlist_generator::NetSize;
 
 #[path = "./address.rs"]
 mod address;
-use address::{AddressType, check_addr};
-
 
 // struct for statistics of the input file
 #[derive(Debug, Default)]
@@ -77,27 +75,17 @@ pub fn read_file(file_path: &str) -> Vec<Ipv4Net> {
     println!("Reading finished.");
     print_sep();
     println!(
-        "IPv4 Hosts:          {:>12}",
-        decimal_mark(stat.ipv4_hosts.to_string())
-    );
-    println!(
-        "IPv4 Nets:           {:>12}",
-        decimal_mark(stat.ipv4_networks.to_string())
-    );
-    println!(
-        "IPv6 Hosts:          {:>12}",
-        decimal_mark(stat.ipv6_hosts.to_string())
-    );
-    println!(
-        "IPv6 Nets:           {:>12}",
-        decimal_mark(stat.ipv6_networks.to_string())
-    );
-    println!(
-        "Total file lines:    {:>12}",
-        decimal_mark(stat.total_file_lines.to_string())
-    );
-    println!(
-        "File size:           {:>12} bytes",
+        "IPv4 Hosts:          {:>12}\n\
+        IPv4 Nets:           {:>12}\n\
+        IPv6 Hosts:          {:>12}\n\
+        IPv6 Nets:           {:>12}\n\
+        Lines in file:       {:>12}\n\
+        File size in bytes:  {:>12}",
+        decimal_mark(stat.ipv4_hosts.to_string()),
+        decimal_mark(stat.ipv4_networks.to_string()),
+        decimal_mark(stat.ipv6_hosts.to_string()),
+        decimal_mark(stat.ipv6_networks.to_string()),
+        decimal_mark(stat.total_file_lines.to_string()),
         decimal_mark(file_size.to_string())
     );
     print_sep();
@@ -127,30 +115,42 @@ pub fn print_sep() {
     println!("{}", "=".repeat(120));
 }
 
-pub fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant) {
+pub fn print_header() {
+    println!(
+        "{:>30}{:>28}{:>28}{:>16}{:>18}",
+        "", "Subnets/Routes", "Hosts included", "Mem Size Kb", "Duration"
+    );
+}
+
+pub fn print_stat(net_list: &Vec<Ipv4Net>, stats: &Stat, start_time: Instant, stage: &str) {
+    let duration = format!("{:#?}", start_time.elapsed());
+
     let s1 = net_list.len().to_string();
     let s1 = decimal_mark(s1);
     let s2 = net_list.size().to_string();
     let s2 = decimal_mark(s2);
 
     let size = mem::size_of::<Ipv4Net>();
-    let total = size * net_list.len() / 1024;
-    let total = decimal_mark(total.to_string());
+    let size = size * net_list.len() / 1024;
+    let total = decimal_mark(size.to_string());
 
-    let nets_p: f32 = net_list.len() as f32 / stats.ipv4_networks as f32 * 100f32; // fixme div by 0
-    let hosts_p: f32 = net_list.size() as f32 / stats.ipv4_hosts as f32 * 100f32; // fixme div by 0
+    let mut nets_p: f32 = 0.0f32;
+    let mut hosts_p: f32 = 0.0f32;
 
-    let line = format!(
-        "Nets: {:>12} ({:>4.1}%)   Hosts:  {:>12} ({:>4.1}%)",
-        s1, nets_p, s2, hosts_p
+    if stats.ipv4_networks > 0 {
+        nets_p = net_list.len() as f32 / stats.ipv4_networks as f32 * 100f32;
+    }
+    if stats.ipv4_hosts > 0 {
+        hosts_p = net_list.size() as f32 / stats.ipv4_hosts as f32 * 100f32;
+    }
+
+    let nets_p = format!("{:>.1}%", nets_p);
+    let hosts_p = format!("{:>.1}%", hosts_p);
+
+    println!(
+        "{:<30}{:>18}{:>10}{:>18}{:>10}{:>16}{:>18}",
+        stage, s1, nets_p, s2, hosts_p, total, duration
     );
-    let line = line.add(&format!(
-        "     Memory: {:>6} Kb   Duration:  {:#?}",
-        total,
-        start_time.elapsed()
-    ));
-    println!("{}", line);
-    print_sep();
 }
 
 fn decimal_mark(s: String) -> String {

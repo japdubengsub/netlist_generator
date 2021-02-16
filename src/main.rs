@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use ipnet::Ipv4Net;
 
-use fileops::{print_sep, print_stat, read_file, Stat, write_file};
+use fileops::{print_header, print_sep, print_stat, read_file, Stat, write_file};
 use netlist_generator::{NetSize, Resize};
 
 mod argparse;
@@ -25,19 +25,18 @@ fn main() {
         ipv6_hosts: 0,
         ipv6_networks: 0,
     };
-    println!("IN FILE");
-    print_stat(&net_list, &original_stat, start_timestamp);
+    print_header();
+    print_sep();
+    print_stat(&net_list, &original_stat, start_timestamp, "Found in file:");
 
     let timestamp = Instant::now();
     net_list.sort();
     net_list.dedup();
-    println!("AFTER SORT + DEDUP");
-    print_stat(&net_list, &original_stat, timestamp);
+    print_stat(&net_list, &original_stat, timestamp, "After sort + dedup:");
 
     let timestamp = Instant::now();
     net_list = Ipv4Net::aggregate(&net_list);
-    println!("AFTER NORMALIZATION");
-    print_stat(&net_list, &original_stat, timestamp);
+    print_stat(&net_list, &original_stat, timestamp, "After normalization");
 
     let min_net_mask: u8;
     let mut max_net_mask: u8 = 31;
@@ -59,17 +58,19 @@ fn main() {
             break;
         }
 
-        println!("RESIZING WITH PREFIX = {:#?} ...", prefix);
+        let stage = format!("Resizing with prefix /{:#?}", prefix);
         let timestamp = Instant::now();
         net_list = net_list.resize_with_prefix(prefix);
-        print_stat(&net_list, &original_stat, timestamp);
+        print_stat(&net_list, &original_stat, timestamp, &stage);
     }
 
-    println!("WRITING FILE...");
+    print!("Writing file");
     let timestamp = Instant::now();
     write_file(net_list, &options.output);
-    println!("Duration: {:#?}", timestamp.elapsed());
+    let duration = format!("{:#?}", timestamp.elapsed());
+    println!("{:>108}", duration);
 
     print_sep();
-    println!("Total time: {:#?}", start_timestamp.elapsed());
+    let duration = format!("{:#?}", start_timestamp.elapsed());
+    println!("Total time: {:>108}", duration);
 }
